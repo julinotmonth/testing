@@ -113,6 +113,13 @@ export const claimsAPI = {
     return response.data;
   },
 
+  uploadTransferProof: async (id, formData) => {
+    const response = await api.post(`/claims/${id}/transfer-proof`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
   delete: async (id) => {
     const response = await api.delete(`/claims/${id}`);
     return response.data;

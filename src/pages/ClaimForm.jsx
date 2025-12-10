@@ -29,7 +29,18 @@ const ClaimForm = () => {
     vehicleType: '',
     vehicleNumber: '',
     
-    // Step 3: Documents
+    // Step 3: Medical & Hospital Info
+    hospitalName: '',
+    treatmentDescription: '',
+    estimatedCost: '',
+    
+    // Step 4: Bank Account Info
+    bankName: '',
+    bankBranch: '',
+    accountNumber: '',
+    accountHolderName: '',
+    
+    // Step 5: Documents
     ktpFile: null,
     policeReportFile: null,
     stnkFile: null,
@@ -39,8 +50,10 @@ const ClaimForm = () => {
   const steps = [
     { number: 1, title: 'Data Diri', icon: User },
     { number: 2, title: 'Data Kejadian', icon: FileText },
-    { number: 3, title: 'Upload Dokumen', icon: Upload },
-    { number: 4, title: 'Review', icon: CheckCircle }
+    { number: 3, title: 'Info Medis', icon: FileText },
+    { number: 4, title: 'Rekening Bank', icon: FileText },
+    { number: 5, title: 'Upload Dokumen', icon: Upload },
+    { number: 6, title: 'Review', icon: CheckCircle }
   ];
 
   const handleChange = (e) => {
@@ -63,6 +76,10 @@ const ClaimForm = () => {
       case 2:
         return formData.incidentDate && formData.incidentLocation && formData.incidentDescription;
       case 3:
+        return true; // Medical info is optional
+      case 4:
+        return formData.bankName && formData.accountNumber && formData.accountHolderName;
+      case 5:
         return formData.ktpFile && formData.policeReportFile;
       default:
         return true;
@@ -98,6 +115,17 @@ const ClaimForm = () => {
       submitData.append('incidentDescription', formData.incidentDescription);
       submitData.append('vehicleType', formData.vehicleType || '');
       submitData.append('vehicleNumber', formData.vehicleNumber || '');
+      
+      // Add hospital/medical info
+      submitData.append('hospitalName', formData.hospitalName || '');
+      submitData.append('treatmentDescription', formData.treatmentDescription || '');
+      submitData.append('estimatedCost', formData.estimatedCost || '');
+      
+      // Add bank info
+      submitData.append('bankName', formData.bankName);
+      submitData.append('bankBranch', formData.bankBranch || '');
+      submitData.append('accountNumber', formData.accountNumber);
+      submitData.append('accountHolderName', formData.accountHolderName);
       
       // Add files
       if (formData.ktpFile) submitData.append('ktpFile', formData.ktpFile);
@@ -239,6 +267,128 @@ const ClaimForm = () => {
 
       case 3:
         return (
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Informasi Medis & Rumah Sakit</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Isi informasi ini jika korban mendapatkan perawatan medis di rumah sakit
+            </p>
+            
+            <Input
+              label="Nama Rumah Sakit"
+              name="hospitalName"
+              value={formData.hospitalName}
+              onChange={handleChange}
+              placeholder="Contoh: RS Umum Daerah Dr. Soetomo"
+            />
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Deskripsi Perawatan / Diagnosa
+              </label>
+              <textarea
+                name="treatmentDescription"
+                value={formData.treatmentDescription}
+                onChange={handleChange}
+                rows="4"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Contoh: Patah tulang kaki kanan, memerlukan operasi dan rawat inap selama 7 hari..."
+              ></textarea>
+            </div>
+            
+            <Input
+              label="Estimasi Biaya Perawatan (Rp)"
+              name="estimatedCost"
+              type="number"
+              value={formData.estimatedCost}
+              onChange={handleChange}
+              placeholder="Contoh: 15000000"
+            />
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Catatan:</strong> Informasi medis bersifat opsional namun akan mempercepat proses verifikasi klaim Anda. 
+                Pastikan estimasi biaya sesuai dengan kuitansi atau perkiraan dari rumah sakit.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Informasi Rekening Bank</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Rekening ini akan digunakan untuk pencairan dana santunan jika klaim disetujui
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nama Bank *
+              </label>
+              <select
+                name="bankName"
+                value={formData.bankName}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Pilih Bank</option>
+                <option value="BCA">Bank Central Asia (BCA)</option>
+                <option value="BNI">Bank Negara Indonesia (BNI)</option>
+                <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
+                <option value="Mandiri">Bank Mandiri</option>
+                <option value="CIMB Niaga">CIMB Niaga</option>
+                <option value="BTN">Bank Tabungan Negara (BTN)</option>
+                <option value="Danamon">Bank Danamon</option>
+                <option value="Permata">Bank Permata</option>
+                <option value="OCBC NISP">OCBC NISP</option>
+                <option value="Panin">Bank Panin</option>
+                <option value="Maybank">Maybank Indonesia</option>
+                <option value="BSI">Bank Syariah Indonesia (BSI)</option>
+                <option value="BJB">Bank BJB</option>
+                <option value="Bank Jatim">Bank Jatim</option>
+                <option value="Bank Jateng">Bank Jateng</option>
+                <option value="Bank DKI">Bank DKI</option>
+                <option value="Lainnya">Bank Lainnya</option>
+              </select>
+            </div>
+            
+            <Input
+              label="Cabang Bank"
+              name="bankBranch"
+              value={formData.bankBranch}
+              onChange={handleChange}
+              placeholder="Contoh: KCP Surabaya Tunjungan"
+            />
+            
+            <Input
+              label="Nomor Rekening *"
+              name="accountNumber"
+              value={formData.accountNumber}
+              onChange={handleChange}
+              placeholder="Masukkan nomor rekening"
+              maxLength="20"
+            />
+            
+            <Input
+              label="Nama Pemilik Rekening *"
+              name="accountHolderName"
+              value={formData.accountHolderName}
+              onChange={handleChange}
+              placeholder="Nama sesuai buku tabungan"
+            />
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                <strong>Penting:</strong> Pastikan data rekening bank yang Anda masukkan sudah benar. 
+                Nama pemilik rekening harus sesuai dengan nama yang tertera di buku tabungan. 
+                Kesalahan data rekening dapat menyebabkan keterlambatan pencairan dana.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Upload Dokumen Pendukung</h3>
             
@@ -317,7 +467,7 @@ const ClaimForm = () => {
           </div>
         );
 
-      case 4:
+      case 6:
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Review Data Pengajuan</h3>
@@ -341,6 +491,25 @@ const ClaimForm = () => {
                 <p><span className="text-gray-600">Jenis Kendaraan:</span> <strong>{formData.vehicleType || '-'}</strong></p>
                 <p><span className="text-gray-600">Nomor Polisi:</span> <strong>{formData.vehicleNumber || '-'}</strong></p>
                 <p><span className="text-gray-600">Kronologi:</span> <strong>{formData.incidentDescription}</strong></p>
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gray-50">
+              <h4 className="font-bold text-gray-800 mb-3">Informasi Medis & Rumah Sakit</h4>
+              <div className="space-y-2 text-sm">
+                <p><span className="text-gray-600">Nama Rumah Sakit:</span> <strong>{formData.hospitalName || '-'}</strong></p>
+                <p><span className="text-gray-600">Deskripsi Perawatan:</span> <strong>{formData.treatmentDescription || '-'}</strong></p>
+                <p><span className="text-gray-600">Estimasi Biaya:</span> <strong>{formData.estimatedCost ? `Rp ${Number(formData.estimatedCost).toLocaleString('id-ID')}` : '-'}</strong></p>
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-blue-50 border border-blue-200">
+              <h4 className="font-bold text-gray-800 mb-3">Informasi Rekening Bank</h4>
+              <div className="space-y-2 text-sm">
+                <p><span className="text-gray-600">Nama Bank:</span> <strong>{formData.bankName}</strong></p>
+                <p><span className="text-gray-600">Cabang:</span> <strong>{formData.bankBranch || '-'}</strong></p>
+                <p><span className="text-gray-600">Nomor Rekening:</span> <strong>{formData.accountNumber}</strong></p>
+                <p><span className="text-gray-600">Nama Pemilik Rekening:</span> <strong>{formData.accountHolderName}</strong></p>
               </div>
             </Card>
 
@@ -432,7 +601,7 @@ const ClaimForm = () => {
               Kembali
             </Button>
 
-            {currentStep < 4 ? (
+            {currentStep < 6 ? (
               <Button icon={ChevronRight} onClick={handleNext}>
                 Selanjutnya
               </Button>

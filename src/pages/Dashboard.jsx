@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { FileText, Users, CheckCircle, Clock, Search, Eye, X, ThumbsUp, ThumbsDown, Download, File } from 'lucide-react';
+import { FileText, Users, CheckCircle, Clock, Search, Eye, X, ThumbsUp, ThumbsDown, Download, File, Upload, CreditCard } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
@@ -25,6 +25,15 @@ const Dashboard = () => {
   const [showFileModal, setShowFileModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
+  
+  // Transfer proof states
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferProofFile, setTransferProofFile] = useState(null);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferDate, setTransferDate] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [uploadingTransfer, setUploadingTransfer] = useState(false);
+  
   const itemsPerPage = 10;
   
   // API base URL for file access
@@ -149,6 +158,63 @@ const Dashboard = () => {
       console.error('Update error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Gagal mengupdate status klaim';
       toast.error(errorMessage);
+    }
+  };
+
+  // Transfer proof handlers
+  const handleOpenTransferModal = (claim) => {
+    setSelectedClaim(claim);
+    setTransferProofFile(null);
+    setTransferAmount(claim.estimatedCost || '');
+    setTransferDate(new Date().toISOString().split('T')[0]);
+    setTransferNotes('');
+    setShowTransferModal(true);
+  };
+
+  const handleTransferFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Ukuran file maksimal 5MB');
+        return;
+      }
+      setTransferProofFile(file);
+    }
+  };
+
+  const handleUploadTransferProof = async () => {
+    if (!transferProofFile) {
+      toast.error('Pilih file bukti transfer');
+      return;
+    }
+    if (!transferAmount) {
+      toast.error('Masukkan jumlah transfer');
+      return;
+    }
+
+    setUploadingTransfer(true);
+    try {
+      const formData = new FormData();
+      formData.append('transferProof', transferProofFile);
+      formData.append('transferAmount', transferAmount);
+      formData.append('transferDate', transferDate);
+      formData.append('transferNotes', transferNotes);
+
+      const response = await claimsAPI.uploadTransferProof(selectedClaim.id, formData);
+      
+      if (response.success) {
+        toast.success('Bukti transfer berhasil diupload');
+        loadClaims();
+        setShowTransferModal(false);
+        setShowDetailModal(false);
+      } else {
+        toast.error(response.message || 'Gagal upload bukti transfer');
+      }
+    } catch (error) {
+      console.error('Upload transfer proof error:', error);
+      toast.error('Gagal upload bukti transfer');
+    } finally {
+      setUploadingTransfer(false);
     }
   };
 
@@ -658,7 +724,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Waktu</p>
-                    <p className="font-medium text-gray-800">{selectedClaim.incidentTime}</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.incidentTime || '-'}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-sm text-gray-600">Lokasi</p>
@@ -670,11 +736,57 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Jenis Kendaraan</p>
-                    <p className="font-medium text-gray-800">{selectedClaim.vehicleType}</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.vehicleType || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Nomor Polisi</p>
-                    <p className="font-medium text-gray-800">{selectedClaim.vehicleNumber}</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.vehicleNumber || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Medical & Hospital Information */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Informasi Medis & Rumah Sakit</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-600">Nama Rumah Sakit</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.hospitalName || '-'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-600">Deskripsi Perawatan</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.treatmentDescription || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Estimasi Biaya Perawatan</p>
+                    <p className="font-medium text-gray-800">
+                      {selectedClaim.estimatedCost 
+                        ? `Rp ${Number(selectedClaim.estimatedCost).toLocaleString('id-ID')}` 
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Account Information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Informasi Rekening Bank</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Nama Bank</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.bankName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Cabang</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.bankBranch || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Nomor Rekening</p>
+                    <p className="font-medium text-gray-800 font-mono">{selectedClaim.accountNumber || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Nama Pemilik Rekening</p>
+                    <p className="font-medium text-gray-800">{selectedClaim.accountHolderName || '-'}</p>
                   </div>
                 </div>
               </div>
@@ -737,6 +849,54 @@ const Dashboard = () => {
                 <StatusBadge status={selectedClaim.status} />
               </div>
 
+              {/* Transfer Proof Section - Show if exists */}
+              {selectedClaim.transferProofPath && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Bukti Transfer
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Jumlah Transfer</p>
+                      <p className="font-bold text-green-700 text-lg">
+                        Rp {Number(selectedClaim.transferAmount || 0).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Tanggal Transfer</p>
+                      <p className="font-medium text-gray-800">{selectedClaim.transferDate || '-'}</p>
+                    </div>
+                    {selectedClaim.transferNotes && (
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-600">Catatan</p>
+                        <p className="font-medium text-gray-800">{selectedClaim.transferNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="border border-green-300 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between p-3 bg-green-100">
+                      <span className="text-sm font-medium text-green-800">Bukti Transfer</span>
+                      <a
+                        href={`${API_BASE_URL}/${selectedClaim.transferProofPath}`}
+                        download
+                        className="p-2 text-green-600 hover:bg-green-200 rounded-lg transition-colors"
+                        title="Unduh Bukti Transfer"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    </div>
+                    <div className="p-2 bg-white">
+                      <img
+                        src={`${API_BASE_URL}/${selectedClaim.transferProofPath}`}
+                        alt="Bukti Transfer"
+                        className="w-full h-auto max-h-64 object-contain"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-3">Ubah Status</h3>
@@ -791,9 +951,29 @@ const Dashboard = () => {
                       </Button>
                     </>
                   )}
-                  {(selectedClaim.status === 'approved' || selectedClaim.status === 'rejected') && (
-                    <div className="col-span-2 text-center text-gray-600">
-                      Klaim sudah {selectedClaim.status === 'approved' ? 'disetujui' : 'ditolak'}
+                  {selectedClaim.status === 'approved' && !selectedClaim.transferProofPath && (
+                    <Button
+                      variant="primary"
+                      onClick={() => handleOpenTransferModal(selectedClaim)}
+                      className="col-span-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <Upload className="w-4 h-4 mr-2 inline" />
+                      Upload Bukti Transfer
+                    </Button>
+                  )}
+                  {selectedClaim.status === 'approved' && selectedClaim.transferProofPath && (
+                    <div className="col-span-2 text-center text-green-600 font-medium">
+                      ✓ Dana sudah ditransfer
+                    </div>
+                  )}
+                  {selectedClaim.status === 'completed' && (
+                    <div className="col-span-2 text-center text-green-600 font-medium">
+                      ✓ Klaim selesai - Dana sudah ditransfer
+                    </div>
+                  )}
+                  {selectedClaim.status === 'rejected' && (
+                    <div className="col-span-2 text-center text-red-600 font-medium">
+                      Klaim ditolak
                     </div>
                   )}
                 </div>
@@ -1053,6 +1233,129 @@ const Dashboard = () => {
                     Hapus
                   </Button>
                 )}
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Transfer Proof Upload Modal */}
+        {showTransferModal && selectedClaim && (
+          <Modal
+            isOpen={showTransferModal}
+            onClose={() => setShowTransferModal(false)}
+            title="Upload Bukti Transfer"
+          >
+            <div className="space-y-6">
+              {/* Claim Info Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-bold text-gray-800 mb-2">Informasi Klaim</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">No. Klaim:</span>
+                    <span className="font-medium ml-1">{selectedClaim.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Nama:</span>
+                    <span className="font-medium ml-1">{selectedClaim.fullName}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Account Info */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="font-bold text-gray-800 mb-2 flex items-center">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Rekening Tujuan
+                </h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-600">Bank:</span> <span className="font-medium">{selectedClaim.bankName}</span></p>
+                  <p><span className="text-gray-600">No. Rekening:</span> <span className="font-medium font-mono">{selectedClaim.accountNumber}</span></p>
+                  <p><span className="text-gray-600">Nama Pemilik:</span> <span className="font-medium">{selectedClaim.accountHolderName}</span></p>
+                  {selectedClaim.bankBranch && (
+                    <p><span className="text-gray-600">Cabang:</span> <span className="font-medium">{selectedClaim.bankBranch}</span></p>
+                  )}
+                </div>
+              </div>
+
+              {/* Transfer Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Jumlah Transfer (Rp) *
+                  </label>
+                  <input
+                    type="number"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    placeholder="Contoh: 5000000"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {selectedClaim.estimatedCost && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Estimasi biaya perawatan: Rp {Number(selectedClaim.estimatedCost).toLocaleString('id-ID')}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tanggal Transfer *
+                  </label>
+                  <input
+                    type="date"
+                    value={transferDate}
+                    onChange={(e) => setTransferDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bukti Transfer * <span className="text-gray-500 text-xs">(JPG, PNG, PDF - Max 5MB)</span>
+                  </label>
+                  <input
+                    type="file"
+                    onChange={handleTransferFileChange}
+                    accept="image/*,.pdf"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  {transferProofFile && (
+                    <p className="text-sm text-green-600 mt-1">✓ {transferProofFile.name}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Catatan (Opsional)
+                  </label>
+                  <textarea
+                    value={transferNotes}
+                    onChange={(e) => setTransferNotes(e.target.value)}
+                    placeholder="Catatan tambahan tentang transfer..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows="2"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowTransferModal(false)}
+                >
+                  Batal
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleUploadTransferProof}
+                  loading={uploadingTransfer}
+                >
+                  <Upload className="w-4 h-4 mr-2 inline" />
+                  Upload & Selesaikan Klaim
+                </Button>
               </div>
             </div>
           </Modal>
