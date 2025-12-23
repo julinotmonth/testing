@@ -39,6 +39,7 @@ const ClaimForm = () => {
     bankBranch: '',
     accountNumber: '',
     accountHolderName: '',
+    bankBookFile: null,
     
     // Step 5: Documents
     ktpFile: null,
@@ -78,7 +79,7 @@ const ClaimForm = () => {
       case 3:
         return true; // Medical info is optional
       case 4:
-        return formData.bankName && formData.accountNumber && formData.accountHolderName;
+        return formData.bankName && formData.accountNumber && formData.accountHolderName && formData.bankBookFile;
       case 5:
         return formData.ktpFile && formData.policeReportFile;
       default:
@@ -132,6 +133,7 @@ const ClaimForm = () => {
       if (formData.policeReportFile) submitData.append('policeReportFile', formData.policeReportFile);
       if (formData.stnkFile) submitData.append('stnkFile', formData.stnkFile);
       if (formData.medicalReportFile) submitData.append('medicalReportFile', formData.medicalReportFile);
+      if (formData.bankBookFile) submitData.append('bankBookFile', formData.bankBookFile);
 
       const response = await claimsAPI.create(submitData);
 
@@ -376,6 +378,26 @@ const ClaimForm = () => {
               onChange={handleChange}
               placeholder="Nama sesuai buku tabungan"
             />
+
+            {/* Upload Buku Tabungan */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Foto/Scan Buku Tabungan * <span className="text-gray-500 text-xs">(Max 5MB)</span>
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Upload halaman depan buku tabungan yang menampilkan nama dan nomor rekening
+              </p>
+              <input
+                type="file"
+                name="bankBookFile"
+                onChange={handleFileChange}
+                accept="image/*,.pdf"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+              {formData.bankBookFile && (
+                <p className="text-sm text-green-600 mt-1">✓ {formData.bankBookFile.name}</p>
+              )}
+            </div>
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
@@ -510,6 +532,12 @@ const ClaimForm = () => {
                 <p><span className="text-gray-600">Cabang:</span> <strong>{formData.bankBranch || '-'}</strong></p>
                 <p><span className="text-gray-600">Nomor Rekening:</span> <strong>{formData.accountNumber}</strong></p>
                 <p><span className="text-gray-600">Nama Pemilik Rekening:</span> <strong>{formData.accountHolderName}</strong></p>
+                {formData.bankBookFile && (
+                  <p className="flex items-center mt-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                    <span className="text-gray-600">Buku Tabungan:</span> <strong className="ml-1">{formData.bankBookFile.name}</strong>
+                  </p>
+                )}
               </div>
             </Card>
 

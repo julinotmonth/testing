@@ -6,6 +6,7 @@ import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
 import Input from '../components/common/Input';
 import Modal from '../components/common/Modal';
+import NotificationBell from '../components/common/NotificationBell';
 import toast from 'react-hot-toast';
 import { claimsAPI, verificationsAPI, statsAPI } from '../services/api';
 import { formatFileSize, isImageFile, isPDFFile } from '../utils/fileHelper';
@@ -50,7 +51,8 @@ const Dashboard = () => {
     ktp: 'KTP',
     police_report: 'Surat Keterangan Polisi',
     stnk: 'STNK',
-    medical_report: 'Surat Keterangan Medis'
+    medical_report: 'Surat Keterangan Medis',
+    bank_book: 'Buku Tabungan'
   };
 
   // Load data from API
@@ -351,9 +353,27 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard Admin</h1>
-          <p className="text-gray-600">Kelola dan pantau semua pengajuan klaim</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard Admin</h1>
+            <p className="text-gray-600">Kelola dan pantau semua pengajuan klaim</p>
+          </div>
+          
+          {/* Notification Bell */}
+          <div className="flex items-center gap-4">
+            <NotificationBell 
+              claims={claims} 
+              verifications={verifications}
+              onViewClaim={(claim) => {
+                setSelectedClaim(claim);
+                setShowDetailModal(true);
+              }}
+              onViewVerification={(verification) => {
+                setSelectedVerification(verification);
+                setShowVerificationModal(true);
+              }}
+            />
+          </div>
         </div>
 
         {/* Statistics Cards */}

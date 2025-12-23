@@ -1,10 +1,24 @@
 import { useState } from 'react';
-import { MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, Twitter } from 'lucide-react';
+import { 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Clock, 
+  MessageCircle, 
+  Send,
+  Building2,
+  Globe,
+  Facebook,
+  Instagram,
+  Twitter,
+  ExternalLink
+} from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix untuk icon marker default Leaflet
+// Fix untuk icon marker Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -12,196 +26,374 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Card Component
-const Card = ({ children, className = '', hover = false }) => (
-  <div className={`bg-white rounded-lg shadow-md ${hover ? 'hover:shadow-lg transition-shadow' : ''} ${className}`}>
-    {children}
-  </div>
-);
-
-// Input Component
-const Input = ({ label, ...props }) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-    <input
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      {...props}
-    />
-  </div>
-);
-
-// Button Component
-const Button = ({ children, icon: Icon, loading = false, onClick }) => (
-  <button
-    onClick={onClick}
-    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 w-full"
-    disabled={loading}
-  >
-    {loading ? (
-      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-    ) : (
-      Icon && <Icon className="w-5 h-5" />
-    )}
-    {children}
-  </button>
-);
-
 const Contact = () => {
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Koordinat SAMSAT Sidoarjo
+  const position = [-7.4478, 112.7183];
+
+  // =============================================
+  // KONFIGURASI - GANTI DENGAN DATA YANG BENAR
+  // =============================================
+  const ADMIN_WHATSAPP = '081217625630'; // Ganti dengan nomor WA admin (format: 62xxx)
+  
+  const contactInfo = {
+    address: 'Jl. Raya Sidoarjo No. 123, Sidoarjo, Jawa Timur 61212',
+    phone: '(031) 8941234',
+    whatsapp: '081234567890',
+    email: 'jasaraharja.sidoarjo@jasaraharja.co.id',
+    website: 'www.jasaraharja.co.id',
+    operationalHours: [
+      { day: 'Senin - Kamis', time: '08:00 - 15:00 WIB' },
+      { day: 'Jumat', time: '08:00 - 14:30 WIB' },
+      { day: 'Sabtu - Minggu', time: 'Tutup' }
+    ],
+    socialMedia: {
+      facebook: 'https://facebook.com/jasaraharja',
+      instagram: 'https://instagram.com/jasaraharja',
+      twitter: 'https://twitter.com/jasaraharja'
+    }
+  };
+  // =============================================
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
+  const handleSubmit = (e) => {
+    e.preventDefault();
     
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      alert('Pesan Anda berhasil dikirim!');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (error) {
-      alert('Gagal mengirim pesan. Coba lagi.');
-    } finally {
-      setLoading(false);
+    // Validasi
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast.error('Mohon lengkapi semua field');
+      return;
     }
+
+    // Validasi email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Format email tidak valid');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Format pesan untuk WhatsApp
+    const waMessage = `*PESAN DARI WEBSITE JASA RAHARJA*
+━━━━━━━━━━━━━━━━━━━━━
+
+*Nama:* ${formData.name}
+*Email:* ${formData.email}
+*Subjek:* ${formData.subject}
+
+*Pesan:*
+${formData.message}
+
+━━━━━━━━━━━━━━━━━━━━━
+_Pesan ini dikirim melalui form kontak website_`;
+
+    // Encode pesan untuk URL
+    const encodedMessage = encodeURIComponent(waMessage);
+    
+    // Buka WhatsApp di tab baru
+    const whatsappURL = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodedMessage}`;
+    window.open(whatsappURL, '_blank');
+    
+    // Reset form
+    setFormData({
+      name: '',
+      email: '',
+      subject: '',
+      message: ''
+    });
+    
+    setIsSubmitting(false);
+    toast.success('Anda akan diarahkan ke WhatsApp');
   };
 
-  const contactInfo = [
-    {
-      icon: MapPin,
-      title: 'Alamat',
-      content: 'Jl. Raya SAMSAT No. 123, Sidoarjo, Jawa Timur 61200',
-      color: 'blue'
-    },
-    {
-      icon: Phone,
-      title: 'Telepon',
-      content: '(031) 1234-5678 / 0800-1-JASA-RAHARJA',
-      color: 'green'
-    },
-    {
-      icon: Mail,
-      title: 'Email',
-      content: 'info@jasaraharja-sidoarjo.id',
-      color: 'purple'
-    },
-    {
-      icon: Clock,
-      title: 'Jam Operasional',
-      content: 'Senin - Jumat: 08:00 - 16:00 WIB\nSabtu: 08:00 - 12:00 WIB',
-      color: 'orange'
-    }
-  ];
-
-  const colorClasses = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600'
+  const handleDirectWhatsApp = () => {
+    const waURL = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent('Halo, saya ingin bertanya mengenai layanan Jasa Raharja SAMSAT Sidoarjo.')}`;
+    window.open(waURL, '_blank');
   };
-
-  // Koordinat kantor Jasa Raharja Sidoarjo (contoh)
-  const position = [-7.443716594782816, 112.68814482137195];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-700 to-blue-500 text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Hubungi Kami</h1>
-            <p className="text-xl text-blue-100">
-              Kami siap membantu Anda. Jangan ragu untuk menghubungi kami
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">Hubungi Kami</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Kami siap membantu Anda. Silakan hubungi kami melalui form di bawah ini 
+            atau kunjungi kantor kami langsung.
+          </p>
         </div>
-      </section>
 
-      {/* Contact Info Cards */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {contactInfo.map((info, index) => (
-              <Card key={index} className="p-6 text-center" hover>
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${colorClasses[info.color]}`}>
-                  <info.icon className="w-8 h-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Kolom Kiri - Informasi Kontak */}
+          <div className="space-y-6">
+            
+            {/* Card Informasi Kontak */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                Informasi Kontak
+              </h2>
+              
+              <div className="space-y-4">
+                {/* Alamat */}
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors">
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <MapPin className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Alamat</h3>
+                    <p className="text-gray-600 text-sm">{contactInfo.address}</p>
+                  </div>
                 </div>
-                <h3 className="font-bold text-gray-800 mb-2">{info.title}</h3>
-                <p className="text-gray-600 text-sm whitespace-pre-line">{info.content}</p>
-              </Card>
-            ))}
+
+                {/* Telepon */}
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors">
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <Phone className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Telepon</h3>
+                    <p className="text-gray-600 text-sm">{contactInfo.phone}</p>
+                  </div>
+                </div>
+
+                {/* WhatsApp */}
+                <div 
+                  onClick={handleDirectWhatsApp}
+                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors cursor-pointer group"
+                >
+                  <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                    <MessageCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">WhatsApp</h3>
+                    <p className="text-gray-600 text-sm">{contactInfo.whatsapp}</p>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-green-600 transition-colors" />
+                </div>
+
+                {/* Email */}
+                <a 
+                  href={`mailto:${contactInfo.email}`}
+                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors"
+                >
+                  <div className="p-3 bg-red-100 rounded-lg">
+                    <Mail className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">Email</h3>
+                    <p className="text-gray-600 text-sm">{contactInfo.email}</p>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                </a>
+
+                {/* Website */}
+                <a 
+                  href={`https://${contactInfo.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors"
+                >
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <Globe className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800">Website</h3>
+                    <p className="text-gray-600 text-sm">{contactInfo.website}</p>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                </a>
+              </div>
+            </div>
+
+            {/* Card Jam Operasional */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-600" />
+                Jam Operasional
+              </h2>
+              
+              <div className="space-y-3">
+                {contactInfo.operationalHours.map((item, index) => (
+                  <div 
+                    key={index}
+                    className={`flex justify-between items-center p-3 rounded-lg ${
+                      item.time === 'Tutup' ? 'bg-red-50' : 'bg-green-50'
+                    }`}
+                  >
+                    <span className="font-medium text-gray-700">{item.day}</span>
+                    <span className={`text-sm font-semibold ${
+                      item.time === 'Tutup' ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {item.time}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card Social Media */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Ikuti Kami</h2>
+              
+              <div className="flex gap-4">
+                <a 
+                  href={contactInfo.socialMedia.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+                >
+                  <Facebook className="w-5 h-5" />
+                  <span className="font-medium">Facebook</span>
+                </a>
+                <a 
+                  href={contactInfo.socialMedia.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition-colors"
+                >
+                  <Instagram className="w-5 h-5" />
+                  <span className="font-medium">Instagram</span>
+                </a>
+                <a 
+                  href={contactInfo.socialMedia.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 p-4 bg-sky-500 hover:bg-sky-600 text-white rounded-xl transition-colors"
+                >
+                  <Twitter className="w-5 h-5" />
+                  <span className="font-medium">Twitter</span>
+                </a>
+              </div>
+            </div>
           </div>
 
-          {/* Contact Form & Map */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Contact Form */}
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Kirim Pesan</h2>
-              <div className="space-y-4">
-                <Input
-                  label="Nama Lengkap"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  required
-                />
-
-                <Input
-                  label="Email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="email@example.com"
-                  required
-                />
-
-                <Input
-                  label="Subjek"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  placeholder="Perihal pesan Anda"
-                  required
-                />
-
+          {/* Kolom Kanan - Form & Peta */}
+          <div className="space-y-6">
+            
+            {/* Form Kirim Pesan via WhatsApp */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <MessageCircle className="w-6 h-6 text-green-600" />
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <h2 className="text-2xl font-bold text-gray-800">Kirim Pesan</h2>
+                  <p className="text-gray-500 text-sm">Pesan akan dikirim via WhatsApp</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Nama Lengkap */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="email@example.com"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Subjek */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subjek
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleInputChange}
+                    placeholder="Perihal pesan Anda"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Pesan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Pesan
                   </label>
                   <textarea
                     name="message"
                     value={formData.message}
-                    onChange={handleChange}
-                    rows="5"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={handleInputChange}
                     placeholder="Tulis pesan Anda di sini..."
+                    rows={5}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none resize-none"
                     required
-                  ></textarea>
+                  />
                 </div>
 
-                <Button icon={Send} loading={loading} onClick={handleSubmit}>
-                  Kirim Pesan
-                </Button>
-              </div>
-            </Card>
+                {/* Tombol Submit */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {isSubmitting ? 'Mengarahkan...' : 'Kirim via WhatsApp'}
+                </button>
 
-            {/* Map */}
-            <Card className="p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Lokasi Kami</h2>
-              <div className="rounded-lg overflow-hidden h-96 border border-gray-200">
+                {/* Info */}
+                <p className="text-center text-gray-400 text-xs mt-4">
+                  Dengan mengklik tombol di atas, Anda akan diarahkan ke WhatsApp untuk mengirim pesan
+                </p>
+              </form>
+            </div>
+
+            {/* Peta Lokasi */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                Lokasi Kami
+              </h2>
+              
+              <div className="h-[300px] rounded-xl overflow-hidden">
                 <MapContainer 
                   center={position} 
                   zoom={15} 
-                  className="w-full h-full"
+                  style={{ height: '100%', width: '100%' }}
                   scrollWheelZoom={false}
                 >
                   <TileLayer
@@ -211,77 +403,29 @@ const Contact = () => {
                   <Marker position={position}>
                     <Popup>
                       <div className="text-center">
-                        <strong>Jasa Raharja Sidoarjo</strong>
-                        <p className="text-sm mt-1">Jl. Raya SAMSAT No. 123</p>
-                        <p className="text-sm">Sidoarjo, Jawa Timur</p>
+                        <strong>Jasa Raharja SAMSAT Sidoarjo</strong>
+                        <br />
+                        <small>{contactInfo.address}</small>
                       </div>
                     </Popup>
                   </Marker>
                 </MapContainer>
               </div>
 
-              {/* Social Media */}
-              <div className="mt-8">
-                <h3 className="font-bold text-gray-800 mb-4">Ikuti Kami</h3>
-                <div className="flex space-x-4">
-                  <a href="#" className="bg-blue-100 text-blue-600 p-3 rounded-full hover:bg-blue-200 transition-colors">
-                    <Facebook className="w-6 h-6" />
-                  </a>
-                  <a href="#" className="bg-pink-100 text-pink-600 p-3 rounded-full hover:bg-pink-200 transition-colors">
-                    <Instagram className="w-6 h-6" />
-                  </a>
-                  <a href="#" className="bg-blue-100 text-blue-500 p-3 rounded-full hover:bg-blue-200 transition-colors">
-                    <Twitter className="w-6 h-6" />
-                  </a>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-              Pertanyaan yang Sering Diajukan
-            </h2>
-
-            <div className="space-y-4">
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-800 mb-2">Berapa lama proses klaim?</h3>
-                <p className="text-gray-600">
-                  Proses verifikasi memakan waktu 3-7 hari kerja. Setelah disetujui, pencairan 
-                  dilakukan dalam 14 hari kerja.
-                </p>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-800 mb-2">Dokumen apa saja yang diperlukan?</h3>
-                <p className="text-gray-600">
-                  KTP, STNK, Surat Keterangan Kecelakaan dari Polisi, dan dokumen pendukung lainnya 
-                  sesuai jenis klaim.
-                </p>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-800 mb-2">Apakah bisa mengajukan klaim secara offline?</h3>
-                <p className="text-gray-600">
-                  Ya, Anda dapat mengajukan klaim langsung ke kantor kami dengan membawa dokumen lengkap.
-                </p>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-800 mb-2">Bagaimana cara tracking status klaim?</h3>
-                <p className="text-gray-600">
-                  Login ke akun Anda dan akses menu "Cek Status Klaim" untuk melihat progress real-time.
-                </p>
-              </Card>
+              {/* Tombol Buka di Google Maps */}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${position[0]},${position[1]}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
+              >
+                <MapPin className="w-4 h-4" />
+                Buka di Google Maps
+              </a>
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
