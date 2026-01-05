@@ -1,56 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Shield, FileText, CheckCircle, Users, TrendingUp, Clock, ArrowRight, Award, Phone } from 'lucide-react';
+import { Shield, FileText, CheckCircle, TrendingUp, Clock, ArrowRight, Award, Phone } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect, useState } from 'react';
-import { statsAPI } from '../services/api';
 
 const Home = () => {
   const { user } = useAuth();
-  const [counters, setCounters] = useState({ claims: 0, users: 0, processed: 0 });
-  const [targets, setTargets] = useState({ claims: 15420, users: 8750, processed: 14890 });
-
-  useEffect(() => {
-    // Fetch real stats from API
-    const fetchStats = async () => {
-      try {
-        const response = await statsAPI.getPublic();
-        if (response.success) {
-          setTargets({
-            claims: response.data.totalClaims || 15420,
-            users: response.data.totalUsers || 8750,
-            processed: response.data.processedClaims || 14890
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    // Animate counters
-    const duration = 2000;
-    const steps = 60;
-    const increment = duration / steps;
-
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      setCounters({
-        claims: Math.floor(targets.claims * progress),
-        users: Math.floor(targets.users * progress),
-        processed: Math.floor(targets.processed * progress)
-      });
-
-      if (step >= steps) clearInterval(timer);
-    }, increment);
-
-    return () => clearInterval(timer);
-  }, [targets]);
 
   return (
     <div>
@@ -97,29 +52,6 @@ const Home = () => {
                 <Shield className="w-32 h-32 mx-auto text-white/80" />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Statistics Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="p-8 text-center">
-              <FileText className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-4xl font-bold text-gray-800 mb-2">{counters.claims.toLocaleString()}</h3>
-              <p className="text-gray-600">Total Klaim Diajukan</p>
-            </Card>
-            <Card className="p-8 text-center">
-              <Users className="w-12 h-12 text-green-600 mx-auto mb-4" />
-              <h3 className="text-4xl font-bold text-gray-800 mb-2">{counters.users.toLocaleString()}</h3>
-              <p className="text-gray-600">Pengguna Terdaftar</p>
-            </Card>
-            <Card className="p-8 text-center">
-              <CheckCircle className="w-12 h-12 text-purple-600 mx-auto mb-4" />
-              <h3 className="text-4xl font-bold text-gray-800 mb-2">{counters.processed.toLocaleString()}</h3>
-              <p className="text-gray-600">Klaim Diproses</p>
-            </Card>
           </div>
         </div>
       </section>

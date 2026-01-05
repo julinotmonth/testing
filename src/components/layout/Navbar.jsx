@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, LayoutDashboard, Shield, FileSearch } from 'lucide-react';
+import { Menu, X, User, LogOut, LayoutDashboard, Shield, FileSearch, History, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
+import UserNotification from '../../pages/Usernotification';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,45 +60,71 @@ const Navbar = () => {
           {/* User Menu / Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <User className="w-5 h-5 text-gray-600" />
-                  <span className="text-gray-700 font-medium">{user.name}</span>
-                </button>
+              <>
+                {/* Notification Bell - Only for non-admin users */}
+                {!isAdmin() && <UserNotification />}
                 
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2">
-                    {isAdmin() && (
-                      <Link
-                        to="/dashboard"
-                        className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <User className="w-5 h-5 text-gray-600" />
+                    <span className="text-gray-700 font-medium">{user.name}</span>
+                  </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 border border-gray-100">
+                      {isAdmin() && (
+                        <Link
+                          to="/dashboard"
+                          className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          <span>Dashboard Admin</span>
+                        </Link>
+                      )}
+                      {!isAdmin() && (
+                        <>
+                          <Link
+                            to="/claim/status"
+                            className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <FileSearch className="w-4 h-4" />
+                            <span>Cek Status Klaim</span>
+                          </Link>
+                          <Link
+                            to="/claim/history"
+                            className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <History className="w-4 h-4" />
+                            <span>Riwayat Klaim</span>
+                          </Link>
+                          <Link
+                            to="/notifications"
+                            className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <Bell className="w-4 h-4" />
+                            <span>Notifikasi</span>
+                          </Link>
+                          <div className="border-t border-gray-100 my-1"></div>
+                        </>
+                      )}
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors w-full text-left text-red-600"
                       >
-                        <LayoutDashboard className="w-4 h-4" />
-                        <span>Dashboard</span>
-                      </Link>
-                    )}
-                    <Link
-                      to="/claim/status"
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Status Klaim</span>
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 transition-colors w-full text-left text-red-600"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Keluar</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                        <LogOut className="w-4 h-4" />
+                        <span>Keluar</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" onClick={() => navigate('/login')}>
@@ -141,27 +168,50 @@ const Navbar = () => {
                 {isAdmin() && (
                   <Link
                     to="/dashboard"
-                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50"
+                    className="flex items-center space-x-2 py-2 px-4 text-gray-600 hover:bg-gray-50"
                     onClick={() => setIsOpen(false)}
                   >
-                    Dashboard
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Dashboard Admin</span>
                   </Link>
                 )}
-                <Link
-                  to="/claim/status"
-                  className="block py-2 px-4 text-gray-600 hover:bg-gray-50"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Status Klaim
-                </Link>
+                {!isAdmin() && (
+                  <>
+                    <Link
+                      to="/claim/status"
+                      className="flex items-center space-x-2 py-2 px-4 text-gray-600 hover:bg-gray-50"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <FileSearch className="w-4 h-4" />
+                      <span>Cek Status Klaim</span>
+                    </Link>
+                    <Link
+                      to="/claim/history"
+                      className="flex items-center space-x-2 py-2 px-4 text-gray-600 hover:bg-gray-50"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <History className="w-4 h-4" />
+                      <span>Riwayat Klaim</span>
+                    </Link>
+                    <Link
+                      to="/notifications"
+                      className="flex items-center space-x-2 py-2 px-4 text-gray-600 hover:bg-gray-50"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Bell className="w-4 h-4" />
+                      <span>Notifikasi</span>
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsOpen(false);
                   }}
-                  className="block w-full text-left py-2 px-4 text-red-600 hover:bg-gray-50"
+                  className="flex items-center space-x-2 w-full text-left py-2 px-4 text-red-600 hover:bg-gray-50"
                 >
-                  Keluar
+                  <LogOut className="w-4 h-4" />
+                  <span>Keluar</span>
                 </button>
               </>
             ) : (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Mail, Lock, Shield } from 'lucide-react';
+import { Mail, Lock, Shield, Phone, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -13,10 +13,26 @@ const Login = () => {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm();
 
+  // Validasi apakah input adalah email atau nomor telepon
+  const validateIdentifier = (value) => {
+    if (!value) return 'Email atau No. Telepon wajib diisi';
+    
+    // Cek apakah format email
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+    // Cek apakah format nomor telepon Indonesia
+    const phoneRegex = /^(\+62|62|0)8[1-9][0-9]{6,10}$/;
+    
+    if (!emailRegex.test(value) && !phoneRegex.test(value)) {
+      return 'Masukkan email atau nomor telepon yang valid';
+    }
+    
+    return true;
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const result = await login(data.email, data.password);
+      const result = await login(data.identifier, data.password);
       
       if (result.success) {
         toast.success('Login berhasil!');
@@ -48,20 +64,21 @@ const Login = () => {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Masuk ke Akun</h2>
           
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              icon={Mail}
-              placeholder="email@example.com"
-              error={errors.email?.message}
-              {...register('email', { 
-                required: 'Email wajib diisi',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Format email tidak valid'
-                }
-              })}
-            />
+            <div>
+              <Input
+                label="Email atau No. Telepon"
+                type="text"
+                icon={User}
+                placeholder="email@example.com atau 08xxxxxxxxxx"
+                error={errors.identifier?.message}
+                {...register('identifier', { 
+                  validate: validateIdentifier
+                })}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Gunakan email atau nomor telepon yang terdaftar
+              </p>
+            </div>
 
             <Input
               label="Password"

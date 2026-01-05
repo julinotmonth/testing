@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { User, Mail, Lock, Shield } from 'lucide-react';
+import { User, Mail, Lock, Shield, Phone } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -15,12 +15,23 @@ const Register = () => {
   
   const password = watch('password');
 
+  // Validasi password custom
+  const validatePassword = (value) => {
+    if (!value) return 'Password wajib diisi';
+    if (!/^[A-Z]/.test(value)) return 'Password harus diawali dengan huruf kapital';
+    if (!/[a-zA-Z]/.test(value)) return 'Password harus mengandung huruf';
+    if (value.length < 6) return 'Password minimal 6 karakter';
+    if (value.length > 10) return 'Password maksimal 10 karakter';
+    return true;
+  };
+
   const onSubmit = async (data) => {
     setLoading(true);
     try {
       const result = await registerUser({
         name: data.name,
-        email: data.email,
+        email: data.email || null,
+        phone: data.phone,
         password: data.password
       });
       
@@ -70,13 +81,28 @@ const Register = () => {
             />
 
             <Input
+              label="No. Telepon"
+              type="tel"
+              icon={Phone}
+              placeholder="08xxxxxxxxxx"
+              error={errors.phone?.message}
+              {...register('phone', { 
+                required: 'No. Telepon wajib diisi',
+                pattern: {
+                  value: /^(\+62|62|0)8[1-9][0-9]{6,10}$/,
+                  message: 'Format No. Telepon tidak valid'
+                }
+              })}
+            />
+
+            <Input
               label="Email"
               type="email"
               icon={Mail}
-              placeholder="email@example.com"
+              placeholder="email@example.com (opsional)"
               error={errors.email?.message}
               {...register('email', { 
-                required: 'Email wajib diisi',
+                required: false,
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                   message: 'Format email tidak valid'
@@ -84,20 +110,21 @@ const Register = () => {
               })}
             />
 
-            <Input
-              label="Password"
-              type="password"
-              icon={Lock}
-              placeholder="••••••••"
-              error={errors.password?.message}
-              {...register('password', { 
-                required: 'Password wajib diisi',
-                minLength: {
-                  value: 6,
-                  message: 'Password minimal 6 karakter'
-                }
-              })}
-            />
+            <div>
+              <Input
+                label="Password"
+                type="password"
+                icon={Lock}
+                placeholder="••••••••"
+                error={errors.password?.message}
+                {...register('password', { 
+                  validate: validatePassword
+                })}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                * Diawali huruf kapital, mengandung huruf, 6-10 karakter
+              </p>
+            </div>
 
             <Input
               label="Konfirmasi Password"

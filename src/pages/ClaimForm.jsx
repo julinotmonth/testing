@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, FileText, Upload, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { User, FileText, Upload, CheckCircle, ChevronRight, ChevronLeft, Search, X } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -8,12 +8,784 @@ import Modal from '../components/common/Modal';
 import toast from 'react-hot-toast';
 import { claimsAPI } from '../services/api';
 
+// Data Rumah Sakit di Indonesia (dikelompokkan per provinsi)
+const HOSPITAL_LIST = [
+  // JAWA TIMUR
+  "RSUD Dr. Soetomo, Surabaya",
+  "RS Universitas Airlangga, Surabaya",
+  "RS Premier Surabaya",
+  "RS Mitra Keluarga Surabaya",
+  "RS National Hospital Surabaya",
+  "RSUD Dr. Soedono, Madiun",
+  "RSUD Sidoarjo",
+  "RS Siti Khodijah Sepanjang, Sidoarjo",
+  "RS Delta Surya, Sidoarjo",
+  "RS Mitra Keluarga Waru, Sidoarjo",
+  "RSI Siti Hajar, Sidoarjo",
+  "RSUD Bangil, Pasuruan",
+  "RS Muhammadiyah Gresik",
+  "RSUD Ibnu Sina, Gresik",
+  "RSUD Dr. R. Koesma, Tuban",
+  "RSUD Jombang",
+  "RSUD Nganjuk",
+  "RSUD Blambangan, Banyuwangi",
+  "RSUD Dr. Haryoto, Lumajang",
+  "RSUD Dr. Saiful Anwar, Malang",
+  "RS Lavalette, Malang",
+  "RS Panti Nirmala, Malang",
+  "RSI Unisma, Malang",
+  "RSUD Kanjuruhan, Malang",
+  "RSUD Mardi Waluyo, Blitar",
+  "RSUD Dr. Iskak, Tulungagung",
+  "RSUD Dr. Soedarsono, Pasuruan",
+  "RSUD Gambiran, Kediri",
+  "RS Baptis Kediri",
+  "RSUD Pare, Kediri",
+  "RSUD Dr. Soebandi, Jember",
+  "RS Citra Husada, Jember",
+  "RSUD Dr. H. Moh. Anwar, Sumenep",
+  "RSUD Syamrabu, Bangkalan",
+  "RSUD Sampang",
+  "RSUD Pamekasan",
+  "RSUD Pacitan",
+  "RSUD Ponorogo",
+  "RSUD Dr. Harjono, Ponorogo",
+  "RS Muhammadiyah Ponorogo",
+  "RSUD Magetan",
+  "RSUD Ngawi",
+  "RSUD Bojonegoro",
+  "RSUD Dr. R. Sosodoro Djatikoesoemo, Bojonegoro",
+  "RSUD Lamongan",
+  "RS Muhammadiyah Lamongan",
+  "RSUD Mojokerto",
+  "RS Gatoel, Mojokerto",
+  "RSUD Prof. Dr. Soekandar, Mojokerto",
+  "RSUD Kertosono, Nganjuk",
+  "RSUD Caruban, Madiun",
+  "RS Dolopo, Madiun",
+  "RSUD Trenggalek",
+  "RS Paru Dungus, Madiun",
+  "RSUD Bondowoso",
+  "RSUD Situbondo",
+  "RSUD Genteng, Banyuwangi",
+  "RS Fatimah, Banyuwangi",
+  "RSUD Probolinggo",
+  "RS Dharma Husada, Probolinggo",
+  
+  // JAKARTA
+  "RSUPN Dr. Cipto Mangunkusumo, Jakarta",
+  "RS Fatmawati, Jakarta",
+  "RSUP Persahabatan, Jakarta",
+  "RS Pusat Pertamina, Jakarta",
+  "RS Pondok Indah, Jakarta",
+  "RS Siloam Semanggi, Jakarta",
+  "RS Siloam TB Simatupang, Jakarta",
+  "RS Siloam Kebon Jeruk, Jakarta",
+  "RS Mayapada Hospital Jakarta Selatan",
+  "RS Mayapada Hospital Kuningan",
+  "RS Mitra Keluarga Kelapa Gading, Jakarta",
+  "RS Mitra Keluarga Kemayoran, Jakarta",
+  "RS Medistra, Jakarta",
+  "RS MMC, Jakarta",
+  "RS Jakarta, Jakarta Selatan",
+  "RS Harapan Kita, Jakarta",
+  "RS Jantung Harapan Kita, Jakarta",
+  "RS Kanker Dharmais, Jakarta",
+  "RS Mata JEC, Jakarta",
+  "RS Hermina Kemayoran, Jakarta",
+  "RS Hermina Jatinegara, Jakarta",
+  "RS Premier Jatinegara, Jakarta",
+  "RS Pelni, Jakarta",
+  "RSPAD Gatot Soebroto, Jakarta",
+  "RS Polri Kramat Jati, Jakarta",
+  "RS Tarakan, Jakarta",
+  "RS Sumber Waras, Jakarta",
+  "RSUD Budhi Asih, Jakarta",
+  "RSUD Pasar Rebo, Jakarta",
+  "RSUD Cengkareng, Jakarta",
+  "RSUD Tarakan, Jakarta",
+  "RSUD Koja, Jakarta",
+  "RS Islam Jakarta Cempaka Putih",
+  "RS Islam Pondok Kopi, Jakarta",
+  "RS Agung, Jakarta",
+  "RS Bunda Jakarta",
+  "RS Columbia Asia Pulomas, Jakarta",
+  "RS EMC Tangerang",
+  "RS Omni Hospital Alam Sutera",
+  "RS Omni Hospital Pulomas, Jakarta",
+  
+  // JAWA BARAT
+  "RSUP Dr. Hasan Sadikin, Bandung",
+  "RS Borromeus, Bandung",
+  "RS Santo Yusuf, Bandung",
+  "RS Advent Bandung",
+  "RS Santosa Hospital Bandung Central",
+  "RS Santosa Hospital Bandung Kopo",
+  "RS Melinda 2, Bandung",
+  "RS Hermina Pasteur, Bandung",
+  "RS Hermina Arcamanik, Bandung",
+  "RS Al Islam, Bandung",
+  "RS Muhammadiyah Bandung",
+  "RSUD Al-Ihsan, Bandung",
+  "RSUD Cibabat, Cimahi",
+  "RS Mitra Kasih, Cimahi",
+  "RSUD Soreang, Bandung",
+  "RSUD Majalaya, Bandung",
+  "RSUD Sumedang",
+  "RS Pakuwon, Sumedang",
+  "RSUD Subang",
+  "RSUD Karawang",
+  "RS Cito Karawang",
+  "RSUD Purwakarta",
+  "RSUD Cianjur",
+  "RSUD Sukabumi",
+  "RS Kartika Kasih, Sukabumi",
+  "RSUD R. Syamsudin, Sukabumi",
+  "RSUD Sekarwangi, Sukabumi",
+  "RSUD Cibinong, Bogor",
+  "RS PMI Bogor",
+  "RS Hermina Bogor",
+  "RS Azra, Bogor",
+  "RS Salak, Bogor",
+  "RSUD Ciawi, Bogor",
+  "RSUD Leuwiliang, Bogor",
+  "RSUD Cileungsi, Bogor",
+  "RSUD Kota Bogor",
+  "RSUD Bekasi",
+  "RS Hermina Bekasi",
+  "RS Mitra Keluarga Bekasi Barat",
+  "RS Mitra Keluarga Bekasi Timur",
+  "RS Siloam Bekasi",
+  "RS Anna Bekasi",
+  "RS Permata Bekasi",
+  "RS Hosana Medica Bekasi",
+  "RSUD Depok",
+  "RS Hermina Depok",
+  "RS Mitra Keluarga Depok",
+  "RS Siloam Depok",
+  "RS Tugu Ibu, Depok",
+  "RS Hasanah Graha Afiah, Depok",
+  "RSUD Cirebon",
+  "RS Gunung Jati, Cirebon",
+  "RS Mitra Plumbon, Cirebon",
+  "RSUD Waled, Cirebon",
+  "RSUD Arjawinangun, Cirebon",
+  "RSUD Indramayu",
+  "RSUD Majalengka",
+  "RSUD Kuningan",
+  "RSUD Garut",
+  "RS Intan Husada, Garut",
+  "RSUD Tasikmalaya",
+  "RS Jasa Kartini, Tasikmalaya",
+  "RSUD Ciamis",
+  "RSUD Banjar",
+  
+  // JAWA TENGAH
+  "RSUP Dr. Kariadi, Semarang",
+  "RS Elisabeth, Semarang",
+  "RS Telogorejo, Semarang",
+  "RS Columbia Asia Semarang",
+  "RS Siloam Semarang",
+  "RS Ken Saras, Semarang",
+  "RS Hermina Pandanaran, Semarang",
+  "RS Roemani Muhammadiyah, Semarang",
+  "RSUD Kota Semarang",
+  "RSUD Tugurejo, Semarang",
+  "RSUP Dr. Soeradji Tirtonegoro, Klaten",
+  "RSUD Klaten",
+  "RSUD Dr. Moewardi, Solo",
+  "RS Dr. Oen Solo",
+  "RS Kasih Ibu Solo",
+  "RS Panti Waluyo, Solo",
+  "RS PKU Muhammadiyah Solo",
+  "RS Hermina Solo",
+  "RSUD Ir. Soekarno, Sukoharjo",
+  "RSUD Karanganyar",
+  "RSUD Wonogiri",
+  "RSUD Sragen",
+  "RSUD Boyolali",
+  "RSUD Kelet, Jepara",
+  "RSUD RA Kartini, Jepara",
+  "RSUD Kudus",
+  "RSUD Pati",
+  "RSUD Blora",
+  "RSUD Rembang",
+  "RSUD Cepu, Blora",
+  "RSUD Demak",
+  "RSUD Sunan Kalijaga, Demak",
+  "RSUD Ungaran",
+  "RSUD Ambarawa",
+  "RSUD Salatiga",
+  "RSUD Kendal",
+  "RSUD Dr. Soeselo, Tegal",
+  "RSUD Kardinah, Tegal",
+  "RS Mitra Siaga, Tegal",
+  "RSUD Brebes",
+  "RSUD Pemalang",
+  "RSUD Pekalongan",
+  "RSUD Batang",
+  "RSUD Banyumas",
+  "RSUD Prof. Dr. Margono Soekarjo, Purwokerto",
+  "RS Wijayakusuma, Purwokerto",
+  "RS Elizabeth, Purwokerto",
+  "RSUD Cilacap",
+  "RSUD Kebumen",
+  "RSUD Purworejo",
+  "RSUD Wonosobo",
+  "RSUD Temanggung",
+  "RSUD Magelang",
+  "RS Tidar, Magelang",
+  "RSUD Muntilan, Magelang",
+  
+  // DI YOGYAKARTA
+  "RSUP Dr. Sardjito, Yogyakarta",
+  "RS Bethesda, Yogyakarta",
+  "RS Panti Rapih, Yogyakarta",
+  "RS JIH, Yogyakarta",
+  "RS Siloam Yogyakarta",
+  "RS Hermina Yogyakarta",
+  "RS PKU Muhammadiyah Yogyakarta",
+  "RS Ludira Husada Tama, Yogyakarta",
+  "RSUD Kota Yogyakarta",
+  "RSUD Panembahan Senopati, Bantul",
+  "RSUD Wates, Kulon Progo",
+  "RSUD Wonosari, Gunungkidul",
+  "RSUD Sleman",
+  "RSUD Prambanan, Sleman",
+  
+  // BANTEN
+  "RSUD Tangerang",
+  "RS Siloam Tangerang",
+  "RS Hermina Tangerang",
+  "RS Mayapada Tangerang",
+  "RS Eka Hospital BSD",
+  "RS Eka Hospital Puri",
+  "RS Medika BSD",
+  "RS Omni Hospital Alam Sutera, Tangerang",
+  "RS Hermina Ciputat",
+  "RSUD Cilegon",
+  "RS Krakatau Medika, Cilegon",
+  "RSUD Serang",
+  "RS Sari Asih Serang",
+  "RSUD Pandeglang",
+  "RSUD Lebak",
+  
+  // SUMATERA UTARA
+  "RSUP H. Adam Malik, Medan",
+  "RS USU, Medan",
+  "RS Siloam Medan",
+  "RS Columbia Asia Medan",
+  "RS Hermina Medan",
+  "RS Elisabeth Medan",
+  "RS Santa Elisabeth, Medan",
+  "RS Murni Teguh, Medan",
+  "RS Permata Bunda, Medan",
+  "RSUD Dr. Pirngadi, Medan",
+  "RSUD Deli Serdang",
+  "RSUD Binjai",
+  "RSUD Tebing Tinggi",
+  "RSUD Pematangsiantar",
+  "RSUD Tarutung",
+  "RSUD Sidikalang",
+  "RSUD Kisaran",
+  "RSUD Rantauprapat",
+  "RSUD Padangsidimpuan",
+  "RSUD Gunung Sitoli",
+  "RSUD Kabanjahe",
+  
+  // SUMATERA BARAT
+  "RSUP Dr. M. Djamil, Padang",
+  "RS Semen Padang",
+  "RS Yos Sudarso, Padang",
+  "RS Selaguri, Padang",
+  "RSUD Padang",
+  "RSUD Pariaman",
+  "RSUD Padang Panjang",
+  "RSUD Bukittinggi",
+  "RS Achmad Mochtar, Bukittinggi",
+  "RSUD Payakumbuh",
+  "RSUD Solok",
+  "RSUD Sawahlunto",
+  "RSUD Lubuk Basung",
+  "RSUD Painan",
+  "RSUD Batusangkar",
+  
+  // RIAU
+  "RSUD Arifin Achmad, Pekanbaru",
+  "RS Santa Maria, Pekanbaru",
+  "RS Eka Hospital, Pekanbaru",
+  "RS Awal Bros, Pekanbaru",
+  "RS Aulia Hospital, Pekanbaru",
+  "RS Siloam Pekanbaru",
+  "RSUD Dumai",
+  "RSUD Bengkalis",
+  "RSUD Tengku Rafian, Siak",
+  "RSUD Rokan Hulu",
+  "RSUD Indragiri Hulu",
+  "RSUD Indragiri Hilir",
+  "RSUD Kampar",
+  "RSUD Kuantan Singingi",
+  
+  // KEPULAUAN RIAU
+  "RSUD Raja Ahmad Tabib, Tanjung Pinang",
+  "RS Awal Bros, Batam",
+  "RS Otorita Batam",
+  "RS Santa Elisabeth, Batam",
+  "RS Budi Kemuliaan, Batam",
+  "RSUD Embung Fatimah, Batam",
+  "RSUD Karimun",
+  "RSUD Natuna",
+  "RSUD Lingga",
+  
+  // SUMATERA SELATAN
+  "RSUP Dr. Mohammad Hoesin, Palembang",
+  "RS Siloam Palembang",
+  "RS Hermina Palembang",
+  "RS Charitas, Palembang",
+  "RS RK Charitas, Palembang",
+  "RS Siti Khadijah, Palembang",
+  "RS Muhammadiyah Palembang",
+  "RSUD Palembang BARI",
+  "RSUD Lubuklinggau",
+  "RSUD Prabumulih",
+  "RSUD Lahat",
+  "RSUD Muara Enim",
+  "RSUD Baturaja",
+  "RSUD Sekayu",
+  "RSUD Kayu Agung",
+  
+  // JAMBI
+  "RSUD Raden Mattaher, Jambi",
+  "RS Siloam Jambi",
+  "RS Theresia, Jambi",
+  "RS Kambang, Jambi",
+  "RSUD H. Abdul Manap, Jambi",
+  "RSUD Sungai Penuh",
+  "RSUD Muaro Jambi",
+  "RSUD Bungo",
+  "RSUD Sarolangun",
+  "RSUD Merangin",
+  "RSUD Tebo",
+  "RSUD Tanjung Jabung Barat",
+  "RSUD Tanjung Jabung Timur",
+  
+  // BENGKULU
+  "RSUD Dr. M. Yunus, Bengkulu",
+  "RS Tiara Sella, Bengkulu",
+  "RSUD Curup",
+  "RSUD Argamakmur",
+  "RSUD Manna",
+  "RSUD Mukomuko",
+  "RSUD Kepahiang",
+  "RSUD Lebong",
+  
+  // LAMPUNG
+  "RSUD Dr. H. Abdul Moeloek, Bandar Lampung",
+  "RS Urip Sumoharjo, Bandar Lampung",
+  "RS Bumi Waras, Bandar Lampung",
+  "RS Imanuel Way Halim, Bandar Lampung",
+  "RS Hermina Lampung",
+  "RSUD Bob Bazar, Lampung Selatan",
+  "RSUD Pringsewu",
+  "RSUD Jenderal Ahmad Yani, Metro",
+  "RSUD Dadi Tjokrodipo, Bandar Lampung",
+  "RSUD A. Dadi Tjokrodipo, Bandar Lampung",
+  "RSUD Menggala",
+  "RSUD Kota Agung",
+  "RSUD Way Kanan",
+  "RSUD Liwa",
+  
+  // BANGKA BELITUNG
+  "RSUD Depati Hamzah, Pangkal Pinang",
+  "RS Bakti Timah, Pangkal Pinang",
+  "RSUD Sungailiat",
+  "RSUD Toboali",
+  "RSUD Tanjung Pandan",
+  "RSUD Manggar",
+  
+  // ACEH
+  "RSUD Dr. Zainoel Abidin, Banda Aceh",
+  "RS Malahayati, Banda Aceh",
+  "RS Harapan Bunda, Banda Aceh",
+  "RSU Meuraxa, Banda Aceh",
+  "RSUD Cut Meutia, Lhokseumawe",
+  "RSUD Langsa",
+  "RSUD Meulaboh",
+  "RSUD Calang",
+  "RSUD Sabang",
+  "RSUD Takengon",
+  "RSUD Bireuen",
+  "RSUD Sigli",
+  "RSUD Jantho",
+  "RSUD Blangkejeren",
+  "RSUD Kutacane",
+  "RSUD Idi",
+  "RSUD Blangpidie",
+  "RSUD Tapaktuan",
+  "RSUD Singkil",
+  "RSUD Subulussalam",
+  
+  // KALIMANTAN BARAT
+  "RSUD Dr. Soedarso, Pontianak",
+  "RS Antonius, Pontianak",
+  "RS St. Antonius, Pontianak",
+  "RS Anugerah Bunda, Pontianak",
+  "RS Promedika, Pontianak",
+  "RSUD Sultan Syarif Mohamad Alkadrie, Pontianak",
+  "RSUD Dr. Abdul Aziz, Singkawang",
+  "RSUD Sanggau",
+  "RSUD Sintang",
+  "RSUD Dr. Agoesdjam, Ketapang",
+  "RSUD Sambas",
+  "RSUD Mempawah",
+  "RSUD Bengkayang",
+  "RSUD Sekadau",
+  "RSUD Melawi",
+  "RSUD Kapuas Hulu",
+  "RSUD Kayong Utara",
+  "RSUD Landak",
+  
+  // KALIMANTAN TENGAH
+  "RSUD Dr. Doris Sylvanus, Palangkaraya",
+  "RS Awal Bros, Palangkaraya",
+  "RS Betang Pambelum, Palangkaraya",
+  "RSUD Dr. Murjani, Sampit",
+  "RSUD Sultan Imanuddin, Pangkalan Bun",
+  "RSUD Muara Teweh",
+  "RSUD Puruk Cahu",
+  "RSUD Kuala Kurun",
+  "RSUD Pulang Pisau",
+  "RSUD Kasongan",
+  "RSUD Tamiang Layang",
+  "RSUD Buntok",
+  "RSUD Sukamara",
+  "RSUD Lamandau",
+  
+  // KALIMANTAN SELATAN
+  "RSUD Ulin, Banjarmasin",
+  "RS Islam Banjarmasin",
+  "RS Suaka Insan, Banjarmasin",
+  "RS Sari Mulia, Banjarmasin",
+  "RS Siloam Banjarmasin",
+  "RSUD Dr. H. Moch. Ansari Saleh, Banjarmasin",
+  "RSUD Idaman, Banjarbaru",
+  "RSUD H. Damanhuri, Barabai",
+  "RSUD H. Badaruddin, Tanjung",
+  "RSUD Ratu Zalecha, Martapura",
+  "RSUD Pelaihari",
+  "RSUD Kandangan",
+  "RSUD Rantau",
+  "RSUD Kotabaru",
+  "RSUD Amuntai",
+  "RSUD Batulicin",
+  
+  // KALIMANTAN TIMUR
+  "RSUD Abdul Wahab Sjahranie, Samarinda",
+  "RS Siloam Samarinda",
+  "RS Dirgahayu, Samarinda",
+  "RS Islam Samarinda",
+  "RS Hermina Samarinda",
+  "RSUD Kanujoso Djatiwibowo, Balikpapan",
+  "RS Pertamina, Balikpapan",
+  "RS Siloam Balikpapan",
+  "RS Restu Ibu, Balikpapan",
+  "RSUD Aji Muhammad Parikesit, Tenggarong",
+  "RSUD Sangatta",
+  "RSUD Taman Husada, Bontang",
+  "RSUD Harapan Insan Sendawar",
+  "RSUD Panglima Sebaya, Tanah Grogot",
+  "RSUD Berau",
+  "RSUD Mahakam Ulu",
+  
+  // KALIMANTAN UTARA
+  "RSUD Tarakan",
+  "RS Siloam Tarakan",
+  "RSUD Tanjung Selor",
+  "RSUD Nunukan",
+  "RSUD Malinau",
+  
+  // SULAWESI UTARA
+  "RSUP Prof. Dr. R. D. Kandou, Manado",
+  "RS Siloam Manado",
+  "RS Bethesda, Manado",
+  "RS Advent Manado",
+  "RS Pancaran Kasih, Manado",
+  "RSUD Noongan",
+  "RSUD Bitung",
+  "RSUD Kotamobagu",
+  "RSUD Talaud",
+  "RSUD Sangihe",
+  "RSUD Liun Kendage Tahuna",
+  "RSUD Bolaang Mongondow",
+  
+  // SULAWESI TENGAH
+  "RSUD Undata, Palu",
+  "RS Anutapura, Palu",
+  "RS Woodward, Palu",
+  "RS Budi Agung, Palu",
+  "RSUD Poso",
+  "RSUD Luwuk",
+  "RSUD Tolitoli",
+  "RSUD Buol",
+  "RSUD Donggala",
+  "RSUD Parigi",
+  "RSUD Morowali",
+  "RSUD Banggai Kepulauan",
+  
+  // SULAWESI SELATAN
+  "RSUP Dr. Wahidin Sudirohusodo, Makassar",
+  "RS Siloam Makassar",
+  "RS Awal Bros Makassar",
+  "RS Hermina Makassar",
+  "RS Ibnu Sina, Makassar",
+  "RS Islam Faisal, Makassar",
+  "RS Pelamonia, Makassar",
+  "RS Stella Maris, Makassar",
+  "RS Labuang Baji, Makassar",
+  "RS Grestelina, Makassar",
+  "RSUD Haji, Makassar",
+  "RSUD Daya, Makassar",
+  "RSUD Syekh Yusuf, Gowa",
+  "RSUD H. Padjonga, Gowa",
+  "RSUD Lasinrang, Pinrang",
+  "RSUD Andi Makkasau, Parepare",
+  "RSUD Batara Guru, Luwu",
+  "RSUD Sawerigading, Palopo",
+  "RSUD Tenriawaru, Bone",
+  "RSUD La Temmamala, Soppeng",
+  "RSUD Andi Sulthan Dg. Radja, Bulukumba",
+  "RSUD Sinjai",
+  "RSUD Bantaeng",
+  "RSUD Jeneponto",
+  "RSUD Takalar",
+  "RSUD Selayar",
+  "RSUD Maros",
+  "RSUD Pangkep",
+  "RSUD Barru",
+  "RSUD Enrekang",
+  "RSUD Tana Toraja",
+  "RSUD Toraja Utara",
+  "RSUD Wajo",
+  "RSUD Sidenreng Rappang",
+  "RSUD Luwu Utara",
+  "RSUD Luwu Timur",
+  
+  // SULAWESI TENGGARA
+  "RSUD Bahteramas, Kendari",
+  "RS Siloam Kendari",
+  "RS Santa Anna, Kendari",
+  "RSUD Kota Kendari",
+  "RSUD Konawe",
+  "RSUD Kolaka",
+  "RSUD Bau-Bau",
+  "RSUD Raha",
+  "RSUD Buton",
+  "RSUD Wakatobi",
+  "RSUD Bombana",
+  "RSUD Konawe Selatan",
+  "RSUD Konawe Utara",
+  "RSUD Kolaka Utara",
+  
+  // GORONTALO
+  "RSUD Prof. Dr. H. Aloei Saboe, Gorontalo",
+  "RS Siloam Gorontalo",
+  "RSUD Otanaha, Gorontalo",
+  "RSUD Toto Kabila, Bone Bolango",
+  "RSUD Pohuwato",
+  "RSUD Boalemo",
+  "RSUD Gorontalo Utara",
+  
+  // SULAWESI BARAT
+  "RSUD Majene",
+  "RSUD Polewali Mandar",
+  "RSUD Mamasa",
+  "RSUD Mamuju",
+  "RSUD Mamuju Utara",
+  "RSUD Mamuju Tengah",
+  
+  // BALI
+  "RSUP Sanglah, Denpasar",
+  "RS Siloam Bali",
+  "RS BIMC, Bali",
+  "RS Prima Medika, Denpasar",
+  "RS Surya Husadha, Denpasar",
+  "RS Bali Royal Hospital",
+  "RS Kasih Ibu, Denpasar",
+  "RS Sanglah, Denpasar",
+  "RSUD Mangusada, Badung",
+  "RSUD Tabanan",
+  "RSUD Sanjiwani, Gianyar",
+  "RSUD Bangli",
+  "RSUD Klungkung",
+  "RSUD Karangasem",
+  "RSUD Buleleng",
+  "RSUD Negara",
+  
+  // NUSA TENGGARA BARAT
+  "RSUD Provinsi NTB, Mataram",
+  "RS Siloam Mataram",
+  "RS Harapan Keluarga, Mataram",
+  "RS Risa, Mataram",
+  "RSUD Kota Mataram",
+  "RSUD H. L. Manambai Abdul Kadir, Sumbawa Besar",
+  "RSUD Praya, Lombok Tengah",
+  "RSUD Patut Patuh Patju, Lombok Barat",
+  "RSUD Selong, Lombok Timur",
+  "RSUD Dompu",
+  "RSUD Bima",
+  "RSUD Kota Bima",
+  "RSUD Sumbawa Barat",
+  "RSUD Lombok Utara",
+  
+  // NUSA TENGGARA TIMUR
+  "RSUD Prof. Dr. W. Z. Johannes, Kupang",
+  "RS Siloam Kupang",
+  "RS Leona, Kupang",
+  "RS Kartini, Kupang",
+  "RSUD S. K. Lerik, Kupang",
+  "RSUD Dr. Ben Mboi, Ruteng",
+  "RSUD Ende",
+  "RSUD Bajawa",
+  "RSUD Maumere",
+  "RSUD Larantuka",
+  "RSUD Atambua",
+  "RSUD Kefamenanu",
+  "RSUD Soe",
+  "RSUD Waikabubak",
+  "RSUD Waingapu",
+  "RSUD Kalabahi",
+  "RSUD Lewoleba",
+  "RSUD Rote Ndao",
+  "RSUD Sabu Raijua",
+  "RSUD Manggarai Timur",
+  "RSUD Sumba Tengah",
+  "RSUD Sumba Barat Daya",
+  
+  // MALUKU
+  "RSUD Dr. M. Haulussy, Ambon",
+  "RS Siloam Ambon",
+  "RS Hative, Ambon",
+  "RSUD Tual",
+  "RSUD Masohi",
+  "RSUD Namlea",
+  "RSUD Saumlaki",
+  "RSUD Dobo",
+  "RSUD Langgur",
+  "RSUD Piru",
+  "RSUD Bula",
+  
+  // MALUKU UTARA
+  "RSUD Dr. Chasan Boesoirie, Ternate",
+  "RS Siloam Ternate",
+  "RSUD Tobelo",
+  "RSUD Labuha",
+  "RSUD Jailolo",
+  "RSUD Sanana",
+  "RSUD Weda",
+  "RSUD Maba",
+  "RSUD Morotai",
+  "RSUD Tidore",
+  
+  // PAPUA
+  "RSUD Jayapura",
+  "RS Siloam Jayapura",
+  "RS Marthen Indey, Jayapura",
+  "RS Dian Harapan, Jayapura",
+  "RSUD Abepura",
+  "RSUD Yowari, Sentani",
+  "RSUD Biak",
+  "RSUD Serui",
+  "RSUD Merauke",
+  "RSUD Wamena",
+  "RSUD Nabire",
+  "RSUD Timika",
+  "RSUD Sarmi",
+  "RSUD Keerom",
+  "RSUD Memberamo",
+  "RSUD Puncak Jaya",
+  "RSUD Tolikara",
+  "RSUD Yahukimo",
+  "RSUD Asmat",
+  "RSUD Boven Digoel",
+  "RSUD Mappi",
+  "RSUD Supiori",
+  "RSUD Waropen",
+  "RSUD Dogiyai",
+  "RSUD Deiyai",
+  "RSUD Intan Jaya",
+  "RSUD Lanny Jaya",
+  "RSUD Nduga",
+  "RSUD Paniai",
+  "RSUD Pegunungan Bintang",
+  "RSUD Puncak",
+  "RSUD Yalimo",
+  
+  // PAPUA BARAT
+  "RSUD Manokwari",
+  "RS Siloam Manokwari",
+  "RSUD Sorong",
+  "RS Sele Be Solu, Sorong",
+  "RSUD Fakfak",
+  "RSUD Kaimana",
+  "RSUD Raja Ampat",
+  "RSUD Teluk Bintuni",
+  "RSUD Teluk Wondama",
+  "RSUD Tambrauw",
+  "RSUD Maybrat",
+  "RSUD Pegunungan Arfak",
+  "RSUD Sorong Selatan",
+  
+  // PAPUA SELATAN
+  "RSUD Merauke",
+  "RSUD Tanah Merah",
+  "RSUD Boven Digoel",
+  "RSUD Asmat",
+  "RSUD Mappi",
+  
+  // PAPUA TENGAH
+  "RSUD Nabire",
+  "RSUD Timika",
+  "RSUD Dogiyai",
+  "RSUD Deiyai",
+  "RSUD Intan Jaya",
+  "RSUD Paniai",
+  "RSUD Puncak",
+  "RSUD Puncak Jaya",
+  "RSUD Mimika",
+  
+  // PAPUA PEGUNUNGAN
+  "RSUD Wamena",
+  "RSUD Lanny Jaya",
+  "RSUD Nduga",
+  "RSUD Tolikara",
+  "RSUD Yahukimo",
+  "RSUD Yalimo",
+  "RSUD Pegunungan Bintang",
+  "RSUD Mamberamo Tengah",
+  
+  // PAPUA BARAT DAYA
+  "RSUD Sorong",
+  "RSUD Sorong Selatan",
+  "RSUD Raja Ampat",
+  "RSUD Tambrauw",
+  "RSUD Maybrat"
+];
+
 const ClaimForm = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [claimNumber, setClaimNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // State untuk autocomplete rumah sakit
+  const [hospitalSearch, setHospitalSearch] = useState('');
+  const [showHospitalDropdown, setShowHospitalDropdown] = useState(false);
+  const [filteredHospitals, setFilteredHospitals] = useState([]);
+  const [isManualHospitalInput, setIsManualHospitalInput] = useState(false);
+  const hospitalInputRef = useRef(null);
+  const hospitalDropdownRef = useRef(null);
+  
   const [formData, setFormData] = useState({
     // Step 1: Personal Data
     fullName: '',
@@ -24,6 +796,8 @@ const ClaimForm = () => {
     // Step 2: Incident Data
     incidentDate: '',
     incidentTime: '',
+    _hour: '',
+    _minute: '',
     incidentLocation: '',
     incidentDescription: '',
     vehicleType: '',
@@ -61,6 +835,110 @@ const ClaimForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Handler untuk input yang hanya boleh angka (NIK)
+  const handleNikChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // Hapus semua karakter non-digit
+    if (value.length <= 16) {
+      setFormData({ ...formData, nik: value });
+    }
+  };
+
+  // Handler untuk input yang hanya boleh angka (Phone) - maksimal 13 digit
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // Hapus semua karakter non-digit
+    if (value.length <= 13) {
+      setFormData({ ...formData, phone: value });
+    }
+  };
+
+  // Handler untuk input jam (0-23)
+  const handleHourChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      setFormData({ ...formData, _hour: '', incidentTime: '' });
+      return;
+    }
+    const hour = parseInt(value);
+    if (hour >= 0 && hour <= 23 && value.length <= 2) {
+      const minute = formData._minute || '00';
+      const newTime = `${value.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+      setFormData({ ...formData, incidentTime: newTime, _hour: value });
+    }
+  };
+
+  // Handler untuk input menit (0-59)
+  const handleMinuteChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value === '') {
+      const hour = formData._hour || '00';
+      setFormData({ ...formData, _minute: '', incidentTime: hour ? `${hour.padStart(2, '0')}:00` : '' });
+      return;
+    }
+    const minute = parseInt(value);
+    if (minute >= 0 && minute <= 59 && value.length <= 2) {
+      const hour = formData._hour || '00';
+      const newTime = `${hour.padStart(2, '0')}:${value.padStart(2, '0')}`;
+      setFormData({ ...formData, incidentTime: newTime, _minute: value });
+    }
+  };
+
+  // Handler untuk pencarian rumah sakit
+  const handleHospitalSearch = (e) => {
+    const value = e.target.value;
+    setHospitalSearch(value);
+    setFormData({ ...formData, hospitalName: value });
+    
+    if (value.length >= 2) {
+      const filtered = HOSPITAL_LIST.filter(hospital => 
+        hospital.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 10); // Batasi 10 hasil
+      setFilteredHospitals(filtered);
+      setShowHospitalDropdown(true);
+    } else {
+      setFilteredHospitals([]);
+      setShowHospitalDropdown(false);
+    }
+  };
+
+  // Handler untuk memilih rumah sakit dari dropdown
+  const handleSelectHospital = (hospital) => {
+    setHospitalSearch(hospital);
+    setFormData({ ...formData, hospitalName: hospital });
+    setShowHospitalDropdown(false);
+    setIsManualHospitalInput(false);
+  };
+
+  // Handler untuk input manual rumah sakit
+  const handleManualHospitalInput = () => {
+    setIsManualHospitalInput(true);
+    setShowHospitalDropdown(false);
+  };
+
+  // Handler untuk membersihkan input rumah sakit
+  const handleClearHospital = () => {
+    setHospitalSearch('');
+    setFormData({ ...formData, hospitalName: '' });
+    setIsManualHospitalInput(false);
+    setShowHospitalDropdown(false);
+  };
+
+  // Effect untuk menutup dropdown saat klik di luar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        hospitalDropdownRef.current && 
+        !hospitalDropdownRef.current.contains(event.target) &&
+        hospitalInputRef.current &&
+        !hospitalInputRef.current.contains(event.target)
+      ) {
+        setShowHospitalDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.size > 5000000) {
@@ -73,7 +951,20 @@ const ClaimForm = () => {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.fullName && formData.nik && formData.phone && formData.address;
+        if (!formData.fullName || !formData.nik || !formData.phone || !formData.address) {
+          return false;
+        }
+        // Validasi NIK harus 16 digit
+        if (formData.nik.length !== 16) {
+          toast.error('NIK harus 16 digit');
+          return false;
+        }
+        // Validasi phone minimal 10 digit, maksimal 13 digit
+        if (formData.phone.length < 10 || formData.phone.length > 13) {
+          toast.error('Nomor HP harus 10-13 digit');
+          return false;
+        }
+        return true;
       case 2:
         return formData.incidentDate && formData.incidentLocation && formData.incidentDescription;
       case 3:
@@ -166,22 +1057,32 @@ const ClaimForm = () => {
               onChange={handleChange}
               placeholder="Masukkan nama lengkap"
             />
-            <Input
-              label="NIK (Nomor Induk Kependudukan) *"
-              name="nik"
-              value={formData.nik}
-              onChange={handleChange}
-              placeholder="16 digit NIK"
-              maxLength="16"
-            />
-            <Input
-              label="Nomor HP *"
-              name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="08xxxxxxxxxx"
-            />
+            <div>
+              <Input
+                label="NIK (Nomor Induk Kependudukan) *"
+                name="nik"
+                type="text"
+                inputMode="numeric"
+                value={formData.nik}
+                onChange={handleNikChange}
+                placeholder="16 digit NIK"
+                maxLength="16"
+              />
+              <p className="text-xs text-gray-500 mt-1">* Hanya angka, 16 digit</p>
+            </div>
+            <div>
+              <Input
+                label="Nomor HP *"
+                name="phone"
+                type="tel"
+                inputMode="numeric"
+                value={formData.phone}
+                onChange={handlePhoneChange}
+                placeholder="08xxxxxxxxxx"
+                maxLength="13"
+              />
+              <p className="text-xs text-gray-500 mt-1">* Hanya angka, maksimal 13 digit</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Alamat Lengkap *
@@ -210,13 +1111,43 @@ const ClaimForm = () => {
                 value={formData.incidentDate}
                 onChange={handleChange}
               />
-              <Input
-                label="Waktu Kejadian"
-                name="incidentTime"
-                type="time"
-                value={formData.incidentTime}
-                onChange={handleChange}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Waktu Kejadian
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData._hour || (formData.incidentTime ? formData.incidentTime.split(':')[0] : '')}
+                        onChange={handleHourChange}
+                        placeholder="00"
+                        maxLength="2"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">Jam</span>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-gray-400">:</span>
+                  <div className="flex-1">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData._minute || (formData.incidentTime ? formData.incidentTime.split(':')[1] : '')}
+                        onChange={handleMinuteChange}
+                        placeholder="00"
+                        maxLength="2"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">Menit</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">* Format 24 jam (00-23 : 00-59)</p>
+              </div>
             </div>
             <Input
               label="Lokasi Kejadian *"
@@ -275,13 +1206,94 @@ const ClaimForm = () => {
               Isi informasi ini jika korban mendapatkan perawatan medis di rumah sakit
             </p>
             
-            <Input
-              label="Nama Rumah Sakit"
-              name="hospitalName"
-              value={formData.hospitalName}
-              onChange={handleChange}
-              placeholder="Contoh: RS Umum Daerah Dr. Soetomo"
-            />
+            {/* Autocomplete Rumah Sakit */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nama Rumah Sakit
+              </label>
+              <div className="relative" ref={hospitalInputRef}>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Search className="w-5 h-5" />
+                </div>
+                <input
+                  type="text"
+                  value={hospitalSearch || formData.hospitalName}
+                  onChange={handleHospitalSearch}
+                  onFocus={() => {
+                    if (hospitalSearch.length >= 2) {
+                      setShowHospitalDropdown(true);
+                    }
+                  }}
+                  placeholder="Ketik nama rumah sakit untuk mencari..."
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {(hospitalSearch || formData.hospitalName) && (
+                  <button
+                    type="button"
+                    onClick={handleClearHospital}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              
+              {/* Dropdown hasil pencarian */}
+              {showHospitalDropdown && (
+                <div 
+                  ref={hospitalDropdownRef}
+                  className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {filteredHospitals.length > 0 ? (
+                    <>
+                      {filteredHospitals.map((hospital, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleSelectHospital(hospital)}
+                          className="w-full px-4 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="text-gray-800">{hospital}</span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleManualHospitalInput}
+                        className="w-full px-4 py-3 text-left bg-gray-50 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none border-t border-gray-200"
+                      >
+                        <span className="text-blue-600 font-medium">
+                          ✏️ Tidak ada? Ketik manual: "{hospitalSearch}"
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleManualHospitalInput}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                    >
+                      <span className="text-gray-600">
+                        Rumah sakit tidak ditemukan. 
+                      </span>
+                      <span className="text-blue-600 font-medium ml-1">
+                        Klik untuk input manual
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {/* Info jika input manual */}
+              {isManualHospitalInput && formData.hospitalName && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Input manual: {formData.hospitalName}
+                </p>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-1">
+                Ketik minimal 2 huruf untuk mencari. Jika tidak ada, klik "Ketik manual"
+              </p>
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

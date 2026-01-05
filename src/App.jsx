@@ -12,6 +12,8 @@ import About from './pages/About';
 import Services from './pages/Services';
 import ClaimForm from './pages/ClaimForm';
 import ClaimStatus from './pages/ClaimStatus';
+import ClaimHistory from './pages/Claimhistory';
+import Notifications from './pages/Notifications';
 import Contact from './pages/Contact';
 import Dashboard from './pages/Dashboard';
 import NotFound from './pages/NotFound';
@@ -45,6 +47,8 @@ function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/claim/new" element={<ClaimForm />} />
                 <Route path="/claim/status" element={<ClaimStatus />} />
+                <Route path="/claim/history" element={<ClaimHistory />} />
+                <Route path="/notifications" element={<Notifications />} />
               </Route>
 
               <Route element={<ProtectedRoute adminOnly={true} />}>
