@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://backend-jasa-production.up.railway.app/api/';
+// ⚠️ FIXED: Removed trailing slash
+const API_URL = import.meta.env.VITE_API_URL || 'https://backend-jasa-production.up.railway.app/api';
 
 // Convert snake_case to camelCase
 const toCamelCase = (str) => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -22,7 +23,11 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  // Add timeout to prevent hanging requests
+  timeout: 30000,
+  // Ensure credentials are sent
+  withCredentials: false
 });
 
 // Request interceptor to add auth token
@@ -32,9 +37,21 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Debug logging in development
+    if (import.meta.env.DEV) {
+      console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, {
+        baseURL: config.baseURL,
+        headers: config.headers
+      });
+    }
+    
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('[API] Request error:', error);
+    return Promise.reject(error);
+  }
 );
 
 // Response interceptor to handle errors and convert keys
@@ -44,14 +61,42 @@ api.interceptors.response.use(
     if (response.data) {
       response.data = convertKeysToCamelCase(response.data);
     }
+    
+    // Debug logging in development
+    if (import.meta.env.DEV) {
+      console.log(`[API] Response from ${response.config.url}:`, response.data);
+    }
+    
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/#/login';
+    // Enhanced error logging
+    if (error.response) {
+      // Server responded with error status
+      console.error('[API] Response error:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        url: error.config?.url
+      });
+      
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/#/login';
+      }
+    } else if (error.request) {
+      // Request made but no response received
+      console.error('[API] Network error:', {
+        message: error.message,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+    } else {
+      // Error in request setup
+      console.error('[API] Request setup error:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );
